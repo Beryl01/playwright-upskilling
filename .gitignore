@@ -1,4 +1,7 @@
 
+# Secrets - never commit
+.mcp.json
+
 # Playwright
 node_modules/
 /test-results/
