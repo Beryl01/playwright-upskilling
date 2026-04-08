@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-const LOGIN_URL = 'https://crm.orangehrm.com/auth/login';
-const DASHBOARD_URL = 'https://crm.orangehrm.com/dashboard/index';
+const LOGIN_URL = 'https://opensource-demo.orangehrmlive.com/web/index.php/auth/login';
+const DASHBOARD_URL = 'https://opensource-demo.orangehrmlive.com/web/index.php/dashboard/index';
 
 // Test user credentials
 const TEST_USER = {
@@ -25,15 +25,15 @@ test.describe('Orange CRM - Login and Navigation', () => {
     await expect(page).toHaveTitle(/OrangeHRM|Login/i);
     
     // Verify login form elements are visible
-    await expect(page.locator('input[name="username"], input[placeholder*="username" i]')).toBeVisible();
-    await expect(page.locator('input[name="password"], input[placeholder*="password" i]')).toBeVisible();
-    await expect(page.locator('button[type="submit"]')).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Username' })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Password' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Login' })).toBeVisible();
   });
 
   test('Username field should be present and focusable', async ({ page }) => {
     await page.goto(LOGIN_URL);
     
-    const usernameField = page.locator('input[name="username"], input[placeholder*="username" i]').first();
+    const usernameField = page.getByRole('textbox', { name: 'Username' });
     await expect(usernameField).toBeEnabled();
     await usernameField.focus();
     await usernameField.fill('testuser');
@@ -44,7 +44,7 @@ test.describe('Orange CRM - Login and Navigation', () => {
   test('Password field should be present and focusable', async ({ page }) => {
     await page.goto(LOGIN_URL);
     
-    const passwordField = page.locator('input[name="password"], input[placeholder*="password" i]').first();
+    const passwordField = page.getByRole('textbox', { name: 'Password' });
     await expect(passwordField).toBeEnabled();
     await passwordField.focus();
     await passwordField.fill('testpassword');
@@ -56,7 +56,7 @@ test.describe('Orange CRM - Login and Navigation', () => {
   test('Login button should be clickable', async ({ page }) => {
     await page.goto(LOGIN_URL);
     
-    const loginButton = page.locator('button[type="submit"]').first();
+    const loginButton = page.getByRole('button', { name: 'Login' });
     await expect(loginButton).toBeEnabled();
     await expect(loginButton).toBeVisible();
   });
@@ -65,14 +65,14 @@ test.describe('Orange CRM - Login and Navigation', () => {
     await page.goto(LOGIN_URL);
     
     // Fill in invalid credentials
-    await page.locator('input[name="username"], input[placeholder*="username" i]').first().fill('invaliduser');
-    await page.locator('input[name="password"], input[placeholder*="password" i]').first().fill('wrongpassword');
+    await page.getByRole('textbox', { name: 'Username' }).fill('invaliduser');
+    await page.getByRole('textbox', { name: 'Password' }).fill('wrongpassword');
     
     // Submit the form
-    await page.locator('button[type="submit"]').first().click();
+    await page.getByRole('button', { name: 'Login' }).click();
     
     // Wait for error message to appear
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     
     // Check for error message
     const errorMessage = page.locator('[role="alert"], .alert, .error, [class*="error" i], [class*="invalid" i]');
@@ -84,16 +84,16 @@ test.describe('Orange CRM - Login and Navigation', () => {
     await page.goto(LOGIN_URL);
     
     // Fill in username
-    await page.locator('input[name="username"], input[placeholder*="username" i]').first().fill(TEST_USER.username);
+    await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username);
     
     // Fill in password
-    await page.locator('input[name="password"], input[placeholder*="password" i]').first().fill(TEST_USER.password);
+    await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password);
     
     // Submit the form
-    await page.locator('button[type="submit"]').first().click();
+    await page.getByRole('button', { name: 'Login' }).click();
     
     // Wait for navigation to complete
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('load');
     
     // Verify we're logged in (either by URL or page content)
     const url = page.url();
@@ -113,10 +113,10 @@ test.describe('Orange CRM - Dashboard Navigation', () => {
   test.beforeEach(async ({ page }) => {
     // Login before each test
     await page.goto(LOGIN_URL);
-    await page.locator('input[name="username"], input[placeholder*="username" i]').first().fill(TEST_USER.username);
-    await page.locator('input[name="password"], input[placeholder*="password" i]').first().fill(TEST_USER.password);
-    await page.locator('button[type="submit"]').first().click();
-    await page.waitForLoadState('networkidle');
+    await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username);
+    await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password);
+    await page.getByRole('button', { name: 'Login' }).click();
+    await page.waitForLoadState('load');
   });
   
   test('Dashboard page should load after login', async ({ page }) => {
@@ -184,7 +184,7 @@ test.describe('Orange CRM - Page Elements', () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     
     // Verify form elements are still visible
-    const usernameField = page.locator('input[name="username"], input[placeholder*="username" i]').first();
+    const usernameField = page.getByRole('textbox', { name: 'Username' });
     await expect(usernameField).toBeVisible();
   });
 
@@ -195,7 +195,7 @@ test.describe('Orange CRM - Page Elements', () => {
     await page.setViewportSize({ width: 375, height: 667 });
     
     // Verify form elements are still visible
-    const usernameField = page.locator('input[name="username"], input[placeholder*="username" i]').first();
+    const usernameField = page.getByRole('textbox', { name: 'Username' });
     await expect(usernameField).toBeVisible();
   });
 
@@ -211,27 +211,28 @@ test.describe('Orange CRM - Accessibility', () => {
   
   test('Form labels should be associated with inputs', async ({ page }) => {
     await page.goto(LOGIN_URL);
-    
-    // Check for labeled input fields
-    const inputs = page.locator('input[type="text"], input[type="password"]');
+
+    // Wait for the Vue-rendered form to appear before counting
+    await expect(page.getByRole('textbox', { name: 'Username' })).toBeVisible();
+    const inputs = page.getByRole('textbox');
     const inputCount = await inputs.count();
-    
+
     expect(inputCount).toBeGreaterThan(0);
   });
 
   test('Login button should be keyboard accessible', async ({ page }) => {
     await page.goto(LOGIN_URL);
-    
-    // Tab to the login button and verify it can be focused
+
+    // Explicitly focus the username field and verify it receives focus
+    const usernameField = page.getByRole('textbox', { name: 'Username' });
+    await usernameField.focus();
+    await expect(usernameField).toBeFocused();
+
+    // Tab to password, then to the Login button
     await page.keyboard.press('Tab');
-    
-    // Get focused element
-    const focusedElement = await page.evaluate(() => {
-      return document.activeElement?.tagName;
-    });
-    
-    // Either an input or button should be focused
-    expect(['INPUT', 'BUTTON', 'A']).toContain(focusedElement);
+    await page.keyboard.press('Tab');
+    const focusedElement = await page.evaluate(() => document.activeElement?.tagName);
+    expect(['INPUT', 'BUTTON']).toContain(focusedElement);
   });
 
   test('Page should have proper contrast and readability', async ({ page }) => {
@@ -255,10 +256,10 @@ test.describe('Orange CRM - Module Navigation', () => {
   test.beforeEach(async ({ page }) => {
     // Login before each test
     await page.goto(LOGIN_URL);
-    await page.locator('input[name="username"], input[placeholder*="username" i]').first().fill(TEST_USER.username);
-    await page.locator('input[name="password"], input[placeholder*="password" i]').first().fill(TEST_USER.password);
-    await page.locator('button[type="submit"]').first().click();
-    await page.waitForLoadState('networkidle');
+    await page.getByRole('textbox', { name: 'Username' }).fill(TEST_USER.username);
+    await page.getByRole('textbox', { name: 'Password' }).fill(TEST_USER.password);
+    await page.getByRole('button', { name: 'Login' }).click();
+    await page.waitForLoadState('load');
   });
 
   test('Should navigate to Admin module', async ({ page }) => {
@@ -267,7 +268,7 @@ test.describe('Orange CRM - Module Navigation', () => {
     
     if (await adminLink.isVisible().catch(() => false)) {
       await adminLink.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('load');
       
       const url = page.url();
       expect(url.includes('admin')).toBeTruthy();
@@ -280,7 +281,7 @@ test.describe('Orange CRM - Module Navigation', () => {
     
     if (await pimLink.isVisible().catch(() => false)) {
       await pimLink.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('load');
       
       const url = page.url();
       expect(url.includes('employee') || url.includes('pim')).toBeTruthy();
@@ -293,7 +294,7 @@ test.describe('Orange CRM - Module Navigation', () => {
     
     if (await leaveLink.isVisible().catch(() => false)) {
       await leaveLink.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('load');
       
       const url = page.url();
       expect(url.includes('leave')).toBeTruthy();
@@ -306,10 +307,10 @@ test.describe('Orange CRM - Module Navigation', () => {
     
     if (await timeLink.isVisible().catch(() => false)) {
       await timeLink.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('load');
       
       const url = page.url();
-      expect(url.includes('attendance') || url.includes('timesheet')).toBeTruthy();
+      expect(url.includes('time') || url.includes('attendance') || url.includes('timesheet')).toBeTruthy();
     }
   });
 
@@ -319,7 +320,7 @@ test.describe('Orange CRM - Module Navigation', () => {
     
     if (await recruitmentLink.isVisible().catch(() => false)) {
       await recruitmentLink.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('load');
       
       const url = page.url();
       expect(url.includes('recruitment')).toBeTruthy();
