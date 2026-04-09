@@ -1,0 +1,800 @@
+{
+  "info": {
+    "name": "OrangeHRM API Tests",
+    "description": "Comprehensive API test collection for OrangeHRM (opensource-demo.orangehrmlive.com).\n\nModules covered:\n  1 - Authentication\n  2 - Employee Management (PIM)\n  3 - Leave Management\n  4 - Recruitment\n  5 - Admin\n  6 - Time & Attendance\n\nHow to use:\n  1. Import this file into Postman (File > Import).\n  2. Run '1 - Authentication / Login - Get Token' first — it auto-sets {{token}}.\n  3. Run remaining folders in order, or use the Collection Runner.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://opensource-demo.orangehrmlive.com/web/index.php/api/v2",
+      "description": "OrangeHRM API v2 base URL"
+    },
+    {
+      "key": "username",
+      "value": "Admin"
+    },
+    {
+      "key": "password",
+      "value": "admin123"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "description": "JWT token — set automatically by the Login request"
+    },
+    {
+      "key": "employeeId",
+      "value": "7",
+      "description": "Employee ID used across PIM and Time & Attendance tests"
+    },
+    {
+      "key": "leaveTypeId",
+      "value": "",
+      "description": "Set automatically by Get Leave Types"
+    },
+    {
+      "key": "vacancyId",
+      "value": "1",
+      "description": "Set automatically by Get Job Vacancies"
+    },
+    {
+      "key": "candidateId",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('Response time under 5000ms', function () {",
+          "  pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1 - Authentication",
+      "description": "Login and session management. Run 'Login - Get Token' first — it stores {{token}} for all subsequent requests.",
+      "item": [
+        {
+          "name": "Login - Get Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains token', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('data');",
+                  "  pm.expect(json.data).to.have.property('token');",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "  console.log('Token stored successfully');",
+                  "});",
+                  "",
+                  "pm.test('Response has expected structure', function () {",
+                  "  var json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/validate",
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "description": "Authenticates with OrangeHRM using username/password and stores the returned JWT token in the {{token}} collection variable. This must be run before any other request."
+          }
+        },
+        {
+          "name": "Get Current User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Has user data', function () {",
+                  "  pm.expect(pm.response.json()).to.have.property('data');",
+                  "});",
+                  "",
+                  "pm.test('Content-Type is JSON', function () {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/core/users/1",
+            "description": "Retrieves the user profile for the Admin (user ID 1)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 - Employee Management (PIM)",
+      "description": "Personal Information Management — read and search employee records.",
+      "item": [
+        {
+          "name": "Get Employees List",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Data is an array', function () {",
+                  "  pm.expect(pm.response.json().data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Has meta.total', function () {",
+                  "  pm.expect(pm.response.json().meta).to.have.property('total');",
+                  "});",
+                  "",
+                  "pm.test('Employee record has required fields', function () {",
+                  "  var d = pm.response.json().data;",
+                  "  if (d.length > 0) {",
+                  "    pm.expect(d[0]).to.have.property('empNumber');",
+                  "    pm.expect(d[0]).to.have.property('firstName');",
+                  "    pm.expect(d[0]).to.have.property('lastName');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pim/employees?limit=25&offset=0",
+              "query": [
+                { "key": "limit", "value": "25", "description": "Page size" },
+                { "key": "offset", "value": "0", "description": "Pagination offset" }
+              ]
+            },
+            "description": "Returns a paginated list of all employees."
+          }
+        },
+        {
+          "name": "Get Employee by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Has empNumber', function () {",
+                  "  pm.expect(pm.response.json().data).to.have.property('empNumber');",
+                  "});",
+                  "",
+                  "pm.test('Has first and last name', function () {",
+                  "  var d = pm.response.json().data;",
+                  "  pm.expect(d).to.have.property('firstName');",
+                  "  pm.expect(d).to.have.property('lastName');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pim/employees/{{employeeId}}",
+            "description": "Returns complete details for the employee identified by {{employeeId}}."
+          }
+        },
+        {
+          "name": "Get Employee Personal Details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Has data', function () {",
+                  "  pm.expect(pm.response.json()).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pim/employees/{{employeeId}}/personal-details",
+            "description": "Returns date of birth, gender, marital status, and nationality for the employee."
+          }
+        },
+        {
+          "name": "Get Employee Contact Details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Has data', function () {",
+                  "  pm.expect(pm.response.json()).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pim/employees/{{employeeId}}/contact-details",
+            "description": "Returns address, phone, and email contact info for the employee."
+          }
+        },
+        {
+          "name": "Search Employees by Name",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array', function () {",
+                  "  pm.expect(pm.response.json().data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pim/employees?nameOrId=Linda&limit=10&offset=0",
+              "query": [
+                { "key": "nameOrId", "value": "Linda", "description": "Search term — name or employee ID" },
+                { "key": "limit", "value": "10" },
+                { "key": "offset", "value": "0" }
+              ]
+            },
+            "description": "Full-text search across employee names and IDs."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 - Leave Management",
+      "description": "Leave types, entitlements, and leave requests.",
+      "item": [
+        {
+          "name": "Get Leave Types",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Non-empty array', function () {",
+                  "  pm.expect(pm.response.json().data).to.be.an('array').with.length.greaterThan(0);",
+                  "});",
+                  "",
+                  "pm.test('Each type has id and name', function () {",
+                  "  var d = pm.response.json().data[0];",
+                  "  pm.expect(d).to.have.property('id');",
+                  "  pm.expect(d).to.have.property('name');",
+                  "  pm.collectionVariables.set('leaveTypeId', d.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/leave/leave-types?limit=25&offset=0",
+            "description": "Returns all configured leave types. Also stores the first leaveTypeId for use in other requests."
+          }
+        },
+        {
+          "name": "Get Leave Entitlements",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array', function () {",
+                  "  pm.expect(pm.response.json().data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/leave/leave-entitlements?empNumber={{employeeId}}&limit=25&offset=0",
+            "description": "Returns leave entitlement balance per leave type for the employee."
+          }
+        },
+        {
+          "name": "Get Leave Requests",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array', function () {",
+                  "  pm.expect(pm.response.json().data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/leave/leave-requests?empNumber={{employeeId}}&limit=25&offset=0",
+            "description": "Returns all leave requests for the specified employee."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 - Recruitment",
+      "description": "Job vacancies and candidate pipeline.",
+      "item": [
+        {
+          "name": "Get Job Vacancies",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array', function () {",
+                  "  pm.expect(pm.response.json().data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Vacancy has id and name', function () {",
+                  "  var d = pm.response.json().data;",
+                  "  if (d.length > 0) {",
+                  "    pm.expect(d[0]).to.have.property('id');",
+                  "    pm.expect(d[0]).to.have.property('name');",
+                  "    pm.collectionVariables.set('vacancyId', d[0].id);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/recruitment/vacancies?limit=25&offset=0",
+            "description": "Returns all active job vacancies. Stores the first vacancyId."
+          }
+        },
+        {
+          "name": "Get Candidates",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array', function () {",
+                  "  pm.expect(pm.response.json().data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Has meta', function () {",
+                  "  pm.expect(pm.response.json()).to.have.property('meta');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/recruitment/candidates?limit=25&offset=0",
+            "description": "Returns all candidates across all vacancies."
+          }
+        },
+        {
+          "name": "Get Vacancy Applications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Has data', function () {",
+                  "  pm.expect(pm.response.json()).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/recruitment/vacancy-applications?limit=25&offset=0",
+            "description": "Returns all job applications across vacancies."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5 - Admin",
+      "description": "User accounts, job titles, locations, and org structure.",
+      "item": [
+        {
+          "name": "Get Admin Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Non-empty array', function () {",
+                  "  pm.expect(pm.response.json().data).to.be.an('array').with.length.greaterThan(0);",
+                  "});",
+                  "",
+                  "pm.test('Admin user is present', function () {",
+                  "  var admin = pm.response.json().data.find(function (u) { return u.userName === 'Admin'; });",
+                  "  pm.expect(admin).to.not.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/users?limit=25&offset=0",
+            "description": "Returns all system users. Verifies the Admin account exists."
+          }
+        },
+        {
+          "name": "Get Job Titles",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array', function () {",
+                  "  pm.expect(pm.response.json().data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Title has id and title fields', function () {",
+                  "  var d = pm.response.json().data;",
+                  "  if (d.length > 0) {",
+                  "    pm.expect(d[0]).to.have.property('id');",
+                  "    pm.expect(d[0]).to.have.property('title');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/job-titles?limit=25&offset=0",
+            "description": "Returns all configured job titles."
+          }
+        },
+        {
+          "name": "Get Locations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array', function () {",
+                  "  pm.expect(pm.response.json().data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/locations?limit=25&offset=0",
+            "description": "Returns all office locations."
+          }
+        },
+        {
+          "name": "Get Nationalities",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Non-empty array', function () {",
+                  "  pm.expect(pm.response.json().data).to.be.an('array').with.length.greaterThan(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/nationalities",
+            "description": "Returns all nationality options."
+          }
+        },
+        {
+          "name": "Get Organization Sub-Units",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Has data', function () {",
+                  "  pm.expect(pm.response.json()).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/subunits",
+            "description": "Returns the organisational hierarchy (departments and teams)."
+          }
+        },
+        {
+          "name": "Get Pay Grades",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Has data', function () {",
+                  "  pm.expect(pm.response.json()).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/pay-grades?limit=25&offset=0",
+            "description": "Returns pay grade definitions."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6 - Time & Attendance",
+      "description": "Timesheets and punch-in/out attendance records.",
+      "item": [
+        {
+          "name": "Get My Timesheets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns array', function () {",
+                  "  pm.expect(pm.response.json().data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/time/timesheets/my-timesheets?limit=10&offset=0",
+            "description": "Returns timesheets for the currently authenticated user."
+          }
+        },
+        {
+          "name": "Get Attendance Records",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Has data', function () {",
+                  "  pm.expect(pm.response.json()).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/attendance/records?empNumber={{employeeId}}&limit=25&offset=0",
+            "description": "Returns punch-in/out attendance records for the specified employee."
+          }
+        },
+        {
+          "name": "Get Timesheets by Employee",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Has data', function () {",
+                  "  pm.expect(pm.response.json()).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/time/timesheets?empNumber={{employeeId}}&limit=10&offset=0",
+            "description": "Admin view — returns timesheets for a specific employee."
+          }
+        },
+        {
+          "name": "Get Attendance Summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 or 404', function () {",
+                  "  pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test('Valid JSON', function () {",
+                  "  pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/attendance/summary?empNumber={{employeeId}}&limit=25&offset=0",
+            "description": "Returns aggregated attendance summary for the specified employee."
+          }
+        }
+      ]
+    }
+  ]
+}
